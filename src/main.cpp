@@ -7,6 +7,7 @@
 #include "Shader.h"
 #include "object.h"
 #include "Camera.h"
+#include "Light.h"
 
 #include <iostream>
 
@@ -54,22 +55,41 @@ int main() {
     // Configure global opengl state
     glEnable(GL_DEPTH_TEST);
 
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glFrontFace(GL_CCW);
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+
     Camera camera(glm::vec3(0.5f, 0.5f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f));
+    Shader Shader("shaders/Shader.vs", "shaders/Shader.fs");
 
-    Shader TextureShader("shaders/shader.vs", "shaders/shader.fs");
+    std::vector<Object*> sceneObjects;
+    std::vector<Light> sceneLight;
 
-    Object WorldAxis("assets/WorldAxis.obj", &TextureShader);
+    Object WorldAxis("assets/WorldAxis.obj", &Shader);
     WorldAxis.scale = glm::vec3(0.2f);
+    sceneObjects.push_back(&WorldAxis);
 
-    Object Cube("assets/Cube.obj", &TextureShader);
-    Cube.position = glm::vec3(0.0f,  -0.5f,  -5.0f);
+    Object Cube("assets/Cube.obj", &Shader);
+    Cube.position = glm::vec3(-3.0f,  -0.5f,  -5.0f);
     Cube.rotation = glm::vec3(20.0f, 15.0f, 0.0f);
     Cube.scale = glm::vec3(0.5f);
+    sceneObjects.push_back(&Cube);
 
-    Object Cube2("assets/Cube.obj", &TextureShader);
-    Cube2.position = glm::vec3(3.0f,  0.0f,  -6.0f);
-    Cube2.rotation = glm::vec3(15.0f, -10.0f, 20.0f);
-    Cube2.scale = glm::vec3(0.8f);
+    Object Monkey("assets/Monkey.obj", &Shader);
+    Monkey.position = glm::vec3(5.0f,  0.0f,  -7.0f);
+    Monkey.scale = glm::vec3(0.8f);
+    sceneObjects.push_back(&Monkey);
+
+    glm::vec3 LightPos = glm::vec3(5.0f, -1.0f, -6.0f);
+    Object LightCube("assets/Cube.obj", &Shader);
+    LightCube.position = LightPos;
+    LightCube.scale = glm::vec3(0.1f);
+    //sceneObjects.push_back(&LightCube);
+    sceneLight.push_back({LightPos, glm::vec3(0.0f, 1.0f, 0.0f), 1.0f});
 
     double lastTime = glfwGetTime();
     double DeltaTime = 0.0;
@@ -136,16 +156,16 @@ int main() {
         // Logic
 
         // Draw
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         glm::mat4 view = camera.GetViewMatrix();
         glm::mat4 projection = glm::mat4(1.0f);
         projection = glm::perspective(glm::radians(45.0f), (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT, 0.1f, 100.0f);
 
-        WorldAxis.draw(view, projection);
-        Cube.draw(view, projection);
-        Cube2.draw(view, projection);
+        for (Object *obj : sceneObjects) {
+            obj->draw(view, projection, sceneLight);
+        }
 
         glfwSwapBuffers(window);
         glfwPollEvents();

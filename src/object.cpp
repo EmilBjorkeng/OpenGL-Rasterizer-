@@ -9,13 +9,15 @@ Object::Object(const char* path, const Shader* shader) {
 
     // Combine faces
     for (auto& face : faces) {
-        int texIndex = 0;
-        auto it = std::find(textures.begin(), textures.end(), face.material.diffuseTexture);
-        if (it == textures.end()) {
-            textures.push_back(face.material.diffuseTexture);
-            texIndex = textures.size() - 1;
-        } else {
-            texIndex = it - textures.begin();
+        int texIndex = -1;
+        if (face.material.diffuseTexture) {
+            auto it = std::find(textures.begin(), textures.end(), face.material.diffuseTexture);
+            if (it == textures.end()) {
+                textures.push_back(face.material.diffuseTexture);
+                texIndex = textures.size() - 1;
+            } else {
+                texIndex = it - textures.begin();
+            }
         }
 
         for (auto& v : face.vertices) {
@@ -30,7 +32,7 @@ Object::Object(const char* path, const Shader* shader) {
             vertices.push_back(v.texture.x);
             vertices.push_back(v.texture.y);
 
-            vertices.push_back((float)texIndex);
+            vertices.push_back(texIndex);
 
             vertices.push_back(face.material.diffuseColor.x);
             vertices.push_back(face.material.diffuseColor.y);
@@ -71,7 +73,9 @@ Object::Object(const char* path, const Shader* shader) {
     glBindVertexArray(0);
 }
 
-void Object::draw(const glm::mat4 view, const glm::mat4 projection) {
+void Object::draw(const glm::mat4 view, const glm::mat4 projection, std::vector<Light> &lights) {
+    if (!shader) return;
+
     // Construct model matrix
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, position);
@@ -80,7 +84,7 @@ void Object::draw(const glm::mat4 view, const glm::mat4 projection) {
     model = glm::rotate(model, glm::radians(rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
     model = glm::scale(model, scale);
 
-    // Apply all matrices
+    shader->use();
     shader->setMat4("projection", projection);
     shader->setMat4("view", view);
     shader->setMat4("model", model);
@@ -91,15 +95,29 @@ void Object::draw(const glm::mat4 view, const glm::mat4 projection) {
         glBindTexture(GL_TEXTURE_2D, textures[i]);
     }
 
-    // Activates shader and maps each texture to their corresponding unit
-    shader->use();
+    // Map each texture to their corresponding unit
     std::vector<int> texUnits(textures.size());
     for (int i = 0; i < (int)textures.size(); ++i)
         texUnits[i] = i;
     shader->setIntArray("textures", texUnits);
 
+    // Lighting
+    shader->setBool("useLighting", true);
+    shader->setInt("numLights", lights.size());
+    for (int i = 0; i < (int)lights.size(); ++i) {
+        shader->setVec3("lightPositions[" + std::to_string(i) + "]", lights[i].position);
+        shader->setVec3("lightColors[" + std::to_string(i) + "]", lights[i].color);
+        shader->setFloat("lightIntensities[" + std::to_string(i) + "]", lights[i].intensity);
+    }
+    shader->setVec3("ambientLightColor", glm::vec3(1.0f));
+    shader->setFloat("ambientLight", 0.1f);
+
     // Bind VAO, draw call, unbind VAB
     glBindVertexArray(VAO);
     glDrawArrays(GL_TRIANGLES, 0, vertices.size() / 13);
     glBindVertexArray(0);
+
+    // Unbind textures
+    for (int i = 0; i < (int)textures.size(); ++i)
+        glBindTexture(GL_TEXTURE_2D, 0);
 }

@@ -2,6 +2,8 @@
 #define __OBJECT_H__
 
 #include "Shader.h"
+#include "Light.h"
+#include <glm/glm.hpp>
 #include <vector>
 
 class Object {
@@ -17,7 +19,7 @@ public:
     glm::vec3 scale = glm::vec3(1.0f);
 
     Object(const char* path, const Shader* shader);
-    void draw(const glm::mat4 view, const glm::mat4 projection);
+    void draw(const glm::mat4 view, const glm::mat4 projection, std::vector<Light> &sceneLight);
 };
 
 #endif
