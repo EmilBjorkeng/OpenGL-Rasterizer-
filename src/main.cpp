@@ -41,12 +41,25 @@ int main() {
         return -1;
     }
 
+    GLFWmonitor* primary = glfwGetPrimaryMonitor();
+    const GLFWvidmode* mode = glfwGetVideoMode(primary);
+
+    // Calculate center position
+    int xpos = (mode->width - WINDOW_WIDTH) / 2;
+    int ypos = (mode->height - WINDOW_HEIGHT) / 2;
+
+    glfwSetWindowPos(window, xpos, ypos);
+    glfwMakeContextCurrent(window);
+
     // Configure global opengl state
     glEnable(GL_DEPTH_TEST);
 
-    Camera camera(glm::vec3(0, 2, 0), glm::vec3(0, 0, 0));
+    Camera camera(glm::vec3(0.5f, 0.5f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f));
 
     Shader TextureShader("shaders/shader.vs", "shaders/shader.fs");
+
+    Object WorldAxis("assets/WorldAxis.obj", &TextureShader);
+    WorldAxis.scale = glm::vec3(0.2f);
 
     Object Cube("assets/Cube.obj", &TextureShader);
     Cube.position = glm::vec3(0.0f,  -0.5f,  -5.0f);
@@ -130,6 +143,7 @@ int main() {
         glm::mat4 projection = glm::mat4(1.0f);
         projection = glm::perspective(glm::radians(45.0f), (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT, 0.1f, 100.0f);
 
+        WorldAxis.draw(view, projection);
         Cube.draw(view, projection);
         Cube2.draw(view, projection);
 
