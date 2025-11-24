@@ -10,6 +10,7 @@ class Object {
 public:
     const Shader* shader = nullptr;
     unsigned int VAO = 0, VBO = 0;
+    bool hasTransparency = false;
 
     std::vector<float> vertices;
     std::vector<unsigned int> textures;

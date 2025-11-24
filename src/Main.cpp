@@ -10,6 +10,7 @@
 #include "Light.h"
 
 #include <iostream>
+#include <algorithm>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
@@ -62,9 +63,6 @@ int main() {
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
-
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     Camera camera(glm::vec3(0.5f, 0.5f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f));
     camera.projectionMatrix = glm::perspective(
@@ -129,6 +127,16 @@ int main() {
     sceneObjects.push_back(&Dragon);
 
     light(glm::vec3(-1.0f, -1.0f, -9.0f), glm::vec3(1.0f, 1.0f, 1.0f), 1.0f);
+
+    std::vector<Object*> opaqueObjects;
+    std::vector<Object*> transparentObjects;
+    for (Object* obj : sceneObjects) {
+        if (obj->hasTransparency) {
+            transparentObjects.push_back(obj);
+        } else {
+            opaqueObjects.push_back(obj);
+        }
+    }
 
     double lastTime = glfwGetTime();
     double DeltaTime = 0.0;
@@ -206,9 +214,32 @@ int main() {
         glm::mat4 view = camera.GetViewMatrix();
         glm::mat4 projection = camera.projectionMatrix;
 
-        for (Object *obj : sceneObjects) {
+        // Draw opaque objects
+        for (Object* obj : opaqueObjects) {
             obj->draw(view, projection, sceneLights);
         }
+
+        // Sort translucent objects back to front
+        glm::vec3 camPos = camera.position;
+        std::sort(transparentObjects.begin(), transparentObjects.end(),
+            [camPos](Object* a, Object* b) {
+                float distA = glm::length(camPos - a->position);
+                float distB = glm::length(camPos - b->position);
+                return distA > distB; // Farthest first
+            });
+
+
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glDepthMask(GL_FALSE);
+
+        // Draw translucent objects
+        for (Object* obj : transparentObjects) {
+            obj->draw(view, projection, sceneLights);
+        }
+
+        glDepthMask(GL_TRUE);
+        glDisable(GL_BLEND);
 
         glfwSwapBuffers(window);
         glfwPollEvents();

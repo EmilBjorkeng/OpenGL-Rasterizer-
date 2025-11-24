@@ -20,6 +20,10 @@ Object::Object(const char* path, const Shader* shader) {
             }
         }
 
+        if (face.material.opacity < 1.0f) {
+            hasTransparency = true;
+        }
+
         for (auto& v : face.vertices) {
             vertices.push_back(v.point.x);
             vertices.push_back(v.point.y);
