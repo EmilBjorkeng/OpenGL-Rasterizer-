@@ -1,29 +1,39 @@
 CC = g++
-CFLAGS = -Isrc/include -std=c++26 -Wall -Wextra
-LDFLAGS = -Lsrc/lib
-GLFWFLAGS = -lglfw3
+CXXFLAGS = -Isrc/include -std=c++26 -Wall -Wextra
+PKG_CFLAGS := $(shell pkg-config --cflags glfw3)
+PKG_LDFLAGS := $(shell pkg-config --static --libs glfw3)
 
 TARGET = Main
-SRC = $(filter-out src/$(TARGET).cpp, $(wildcard src/*.cpp))
-OBJ = $(SRC:src/%.cpp=%.o) glad.o
+SRC_CPP = $(wildcard src/*.cpp)
+SRC_C = $(wildcard src/*.c)
+OBJ = $(SRC_CPP:src/%.cpp=%.o) $(SRC_C:src/%.c=%.o)
+
+ifeq ($(OS),Windows_NT)
+	RM = del /Q
+	EXE = .exe
+	RUN_CMD = .\$(TARGET)$(EXE)
+else
+	RM = rm -f
+	EXE =
+	RUN_CMD = ./$(TARGET)
+endif
 
 .PHONY: all clean run
 
 all: $(TARGET)
 
 %.o: src/%.cpp
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CXXFLAGS) $(PKG_CFLAGS) -c $< -o $@
 
-glad.o: src/gl.c
-	$(CC) $(CFLAGS) -c $< -o $@
+%.o: src/%.c
+	$(CC) $(CXXFLAGS) $(PKG_CFLAGS) -c $< -o $@
 
 $(TARGET): $(OBJ)
-	$(CC) $(CFLAGS) $^ src/$(TARGET).cpp $(LDLIBS) ${GLFWFLAGS} -o $@
+	$(CC) $(CXXFLAGS) $(PKG_LDFLAGS) $^ -o $@$(EXE)
 
 clean:
-	-del $(TARGET).exe 2>nul || true
-	-del *.o 2>nul || true
+	$(RM) $(TARGET)$(EXE)
+	$(RM) *.o
 
-run: clean all
-	.\$(TARGET).exe
-	$(MAKE) clean
+run: all
+	$(RUN_CMD)

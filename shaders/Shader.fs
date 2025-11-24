@@ -1,4 +1,4 @@
-#version 330 core
+#version 440 core
 
 #define MAX_TEXTURES 16
 #define MAX_LIGHTS 16

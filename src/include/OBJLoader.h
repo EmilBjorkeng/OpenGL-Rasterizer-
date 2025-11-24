@@ -3,7 +3,7 @@
 
 #include "Material.h"
 #include <vector>
-#include <String>
+#include <string>
 
 struct Vertex {
     glm::vec3 point;

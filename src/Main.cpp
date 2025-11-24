@@ -5,7 +5,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "Shader.h"
-#include "object.h"
+#include "Object.h"
 #include "Camera.h"
 #include "Light.h"
 
@@ -14,18 +14,18 @@
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 
 #define WINDOW_TITLE "Title"
-#define WINDOW_WIDTH 1920
-#define WINDOW_HEIGHT 1080
+int window_width = 1920;
+int window_height = 1080;
 
 int main() {
     // Initialize and configure (glfw)
     glfwInit();
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     // Create window (glfw)
-    GLFWwindow* window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE, NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(window_width, window_height, WINDOW_TITLE, NULL, NULL);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -46,8 +46,8 @@ int main() {
     const GLFWvidmode* mode = glfwGetVideoMode(primary);
 
     // Calculate center position
-    int xpos = (mode->width - WINDOW_WIDTH) / 2;
-    int ypos = (mode->height - WINDOW_HEIGHT) / 2;
+    int xpos = (mode->width - window_width) / 2;
+    int ypos = (mode->height - window_height) / 2;
 
     glfwSetWindowPos(window, xpos, ypos);
     glfwMakeContextCurrent(window);
@@ -62,12 +62,15 @@ int main() {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-
     Camera camera(glm::vec3(0.5f, 0.5f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f));
-    Shader Shader("shaders/Shader.vs", "shaders/Shader.fs");
+    camera.projectionMatrix = glm::perspective(
+            glm::radians(45.0f), (float)window_width / (float)window_height,
+            camera.nearPlane, camera.farPlane);
+    glfwSetWindowUserPointer(window, &camera);
 
+    Shader Shader("shaders/Shader.vs", "shaders/Shader.fs");
     std::vector<Object*> sceneObjects;
-    std::vector<Light> sceneLight;
+    std::vector<Light> sceneLights;
 
     Object WorldAxis("assets/WorldAxis.obj", &Shader);
     WorldAxis.scale = glm::vec3(0.2f);
@@ -79,6 +82,8 @@ int main() {
     Cube.scale = glm::vec3(0.5f);
     sceneObjects.push_back(&Cube);
 
+    sceneLights.push_back({glm::vec3(-1.5f,  0.0f,  -4.0f), glm::vec3(0.0f, 0.0f, 1.0f), 1.0f});
+
     Object Monkey("assets/Monkey.obj", &Shader);
     Monkey.position = glm::vec3(5.0f,  0.0f,  -7.0f);
     Monkey.scale = glm::vec3(0.8f);
@@ -89,7 +94,7 @@ int main() {
     LightCube.position = LightPos;
     LightCube.scale = glm::vec3(0.1f);
     //sceneObjects.push_back(&LightCube);
-    sceneLight.push_back({LightPos, glm::vec3(0.0f, 1.0f, 0.0f), 1.0f});
+    sceneLights.push_back({LightPos, glm::vec3(0.0f, 1.0f, 0.0f), 1.0f});
 
     double lastTime = glfwGetTime();
     double DeltaTime = 0.0;
@@ -160,11 +165,10 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         glm::mat4 view = camera.GetViewMatrix();
-        glm::mat4 projection = glm::mat4(1.0f);
-        projection = glm::perspective(glm::radians(45.0f), (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT, 0.1f, 100.0f);
+        glm::mat4 projection = camera.projectionMatrix;
 
         for (Object *obj : sceneObjects) {
-            obj->draw(view, projection, sceneLight);
+            obj->draw(view, projection, sceneLights);
         }
 
         glfwSwapBuffers(window);
@@ -176,5 +180,14 @@ int main() {
 
 // Callback for whenever the window size changed (by OS or user resize)
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
+    if (height == 0) height = 1;
     glViewport(0, 0, width, height);
+
+    Camera* camera = static_cast<Camera*>(glfwGetWindowUserPointer(window));
+    camera->projectionMatrix = glm::perspective(
+        glm::radians(45.0f), (float)width / (float)height,
+        camera->nearPlane, camera->farPlane);
+
+    window_width = width;
+    window_height = height;
 }
