@@ -1,0 +1,6 @@
+.vscode
+*.o
+# Linux executable
+Main
+# Windows executable
+Main.exe
